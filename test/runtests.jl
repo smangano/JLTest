@@ -113,6 +113,51 @@ using JLTest
     @testFailed("Should have been skipped")
   end
 
+  @test begin
+    @testname "expected errors"
+    @testFailed("I expect this to fail")
+    @expectFailures(1)
+  end
+
+  @test begin
+    @testname "assertThrows specific exception"
+    d = Dict()
+    @assertThrows KeyError d["bogus"]
+  end
+
+  @test begin
+    @testname "assertThrows one of specified exceptions"
+    d = Dict()
+    @assertThrows KeyError ErrorException error("ouch")
+  end
+
+   @test begin
+    @testname "assertThrows any exception"
+    d = Dict()
+    @assertThrows error("boom")
+  end
+
+  @test begin
+    @testname "assertThrows reports exception was not thrown"
+    d = Dict()
+    @assertThrows ()->"I dont throw"()
+    @expectFailures(1)
+  end
+
+  @test begin
+    @testname "assertThrows reports exception was not thrown from a list of possible"
+    d = Dict()
+    @assertThrows KeyError ErrorException ()->"I dont throw"()
+    @expectFailures(1)
+  end
+
+   @test begin
+    @testname "assertThrows reports exception was thrown but not in expected list"
+    d = Dict()
+    @assertThrows KeyError error("I throw ErrorException")
+    @expectFailures(1)
+  end
+
   @testreport
 
 #   #should fail

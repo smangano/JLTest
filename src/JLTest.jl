@@ -2,6 +2,7 @@ module JLTest
 
 _TESTCTX = :(testContext)
 
+#Used to store test case state as testcase is executed
 type TestContext
   name             #test case name
   curTest          #current test
@@ -22,8 +23,8 @@ end
 
 function printTestReport(tc::JLTest.TestContext)
   local rep = "Run: $(tc.numRun) | Passed: $(tc.numPassed) | Failed: $(tc.numFailed) | Errors: $(tc.numErrors) | Skipped: $(tc.numSkipped)"
-  local topLeft = repeat("=",int((length(rep) - length(tc.name) - 1)/2))
-  local topRight = repeat("=", length(rep) - length(topLeft) - length(tc.name) - 1)
+  local topLeft = repeat("=",int((length(rep) - length(tc.name) - 2)/2))
+  local topRight = repeat("=", length(rep) - length(topLeft) - length(tc.name) - 2)
   local borderBot = repeat("=",length(rep))
   println(topLeft," ",tc.name," ", topRight)
   println(rep)
@@ -261,6 +262,31 @@ macro expectFailures(n)
       println("Error: ", $(esc(n))," expected failures but ", $(esc(_TESTCTX)).numFailed, " actual")
     else
       $(esc(_TESTCTX)).numFailed -= $(esc(n))
+    end
+  end
+end
+
+export @assertThrows
+macro assertThrows(args...)
+  if length(args) == 1
+    exceps = []
+    f = args[1]
+  else
+    exceps = args[1:end-1]
+    f = args[end]
+  end
+  quote
+    sexceps = $exceps
+    try
+      $(esc(f))
+      $(esc(_TESTCTX)).numFailed += 1
+      println("assertThrows: Expected exception", length($exceps) > 0 ? "in $sexceps" : "")
+    catch ex
+      tex = typeof(ex).name.name
+      if length($exceps) > 0 && !( tex in $exceps)
+        $(esc(_TESTCTX)).numFailed += 1
+        println("assertThrows: Expected exceptions in $sexceps got $tex")
+      end
     end
   end
 end
