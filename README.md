@@ -5,29 +5,30 @@
 A unittest framework for Julia (inspired by Python's unittest)
 
 ## Usage
-using JLTest
+-------------------------------------------------------
+    using JLTest
 
-@testcase begin
+    @testcase begin
+        @casename "Mytest Tests"
 
-  @casename "Mytest Tests"
+        #Some code
+        x = 0
 
-  #Some code
-  x = 0
+        #Function to be called before each test (optional)
+        @setUp () -> (x+=1)
 
-  #Function to be called before each test (optional)
-  @setUp () -> (x+=1)
+        #Function to be called after each test (optional)
+        @tearDown () -> (x=0)
 
-  #Function to be called after each test (optional)
-  @tearDown () -> (x=0)
+        @test begin
+            @testname "A Simple Test" #Name of test (optional)
+            @assertEqual(x,1)
+        end
 
-  @test begin
-    @testname "A Simple Test" #Name of test (optional)
-    @assertEqual(x,1)
-  end
+        #more tests or code...
 
-  #more tests or code...
-
-end # end of test case
+    end # end of test case
+-------------------------------------------------------
 
 ## Available Test Macros
 NOTE: [...] below indicates optional args not array
