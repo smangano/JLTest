@@ -131,6 +131,24 @@ macro tearDown(func)
   end
 end
 
+export @setUpCase
+#set a function to be called before testcase starts
+macro setUpCase(func)
+  quote
+    $(esc(_TESTCTX)).setUpCase =  $(esc(func))
+    nothing
+  end
+end
+
+export @tearDownCase
+#set a function to be called after testcase finishes
+macro tearDownCase(func)
+  quote
+    $(esc(_TESTCTX)).tearDownCase =  $(esc(func))
+    nothing
+  end
+end
+
 export @assertEqual
 macro assertEqual(val1,val2)
   test = :((a,b)->(a == b))

@@ -47,13 +47,29 @@ Skip this test if cond is true or always skip if cond ommited
 
 ###@casename "test case name"
 
+Names the test case. Will be output when status is displayed
+
 ###@testname "test name"
 
+Names the test. Will be displayed in message if test fails. If ommitedd name will be Test n where n=1 for first test.
+
 ###@setUp function
+
+Set a function to be called before each test starts
+
 
 ###@tearDown function
 
 Set a function to be called after each test finishes
+
+###@setUpCase function
+
+Set a function to be called before testcase starts
+
+
+###@tearDownCase function
+
+Set a function to be called after testcase finishes
 
 ###@assertEqual(a,b)
 
