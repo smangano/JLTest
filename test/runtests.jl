@@ -160,61 +160,6 @@ using JLTest
 
   @testreport
 
-#   #should fail
-#   @assertEqual(x,0)
-
-#   #should get DomainError
-#   @assertEqual(sqrt(-1),0)
-
 end
 
-
-# macroexpand(:(@testCase begin
-
-#   @testname "JLTest Tests"
-
-#   x = 0
-
-#   @setUp () -> (x+=1)
-#   @tearDown () -> (x=0)
-
-#   @assertEqual(x,1)
-
-#   @assertEqual(x,1)
-
-#   @assertEqual(x,0)
-
-# end))
-
-# macroexpand(:(@testCase begin
-#   myString1 = "a string"
-#   myString1a = myString1
-#   myString2 = copy(myString1)
-
-#   @assertIsNot(myString1, myString2)
-# end))
-
-# @testCase begin
-#   myString1 = "a string"
-#   myString1a = myString1
-#   myString2 = deepcopy(myString1)
-
-#   @assertIsNot(myString1, myString2)
-# end
-
-# macroexpand(:(@testCase begin
-
-#   @testCaseName "JLTest Tests"
-
-#   x = 0
-
-#   @setUp () -> (x+=1)
-#   @tearDown () -> (x=0)
-
-#   @test begin
-#     @testname "assertEqual Tests"
-#     @assertEqual(1,1)
-#   end
-# end
-# ))
 
