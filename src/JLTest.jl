@@ -17,18 +17,27 @@ type TestContext
   tearDown         #after test
   preAssert        #before assertion
   postAssert       #after assertion
-
-  TestContext(desc) = new (desc,"",0,0,0,0,0,()->nothing, ()->nothing, ()->nothing, ()->nothing,(args...)->nothing, (args...)->nothing)
+  noprint          #disable outpt
+  userData         #for user customization
+  TestContext(desc) = new (desc,"",0,0,0,0,0,()->nothing, ()->nothing, ()->nothing, ()->nothing,(args...)->nothing, (args...)->nothing, false, nothing)
 end
+
+function printMsg(tc, args...;nl='\n')
+  if tc.noprint;
+  else
+    print(args...,nl)
+  end
+end
+
 
 function printTestReport(tc::JLTest.TestContext)
   local rep = "Run: $(tc.numRun) | Passed: $(tc.numPassed) | Failed: $(tc.numFailed) | Errors: $(tc.numErrors) | Skipped: $(tc.numSkipped)"
   local topLeft = repeat("=",int((length(rep) - length(tc.name) - 2)/2))
   local topRight = repeat("=", length(rep) - length(topLeft) - length(tc.name) - 2)
   local borderBot = repeat("=",length(rep))
-  println(topLeft," ",tc.name," ", topRight)
-  println(rep)
-  println(borderBot)
+  printMsg(tc,topLeft," ",tc.name," ", topRight)
+  printMsg(tc,rep)
+  printMsg(tc,borderBot)
 end
 
 function setUp(tc::JLTest.TestContext)
@@ -36,24 +45,26 @@ function setUp(tc::JLTest.TestContext)
     tc.numRun += 1
     tc.setUp()
   catch ex
-    println("Exception in setUp for ", tc.desc, " : ", ex)
+    printMsg(tc,"Exception in setUp for ", tc.desc, " : ", ex)
   end
 end
 
 function doTest(tc::JLTest.TestContext, assertion::String, test::Function, args...)
   if !(test(args...))
     tc.numFailed += 1
-    print(assertion,"(")
+    printMsg(tc,assertion,"(";nl="")
     for arg in args[1:end-1]
-      print(arg,", ")
+      printMsg(tc,arg,", ";nl="")
     end
-    println(args[end], ") failed")
+    printMsg(tc,args[end], ") failed")
+    return false
   end
+  return true
 end
 
 function handleException(tc::JLTest.TestContext, assertion, ex, bt)
   tc.numErrors += 1
-  println("Exception:", ex, " during ", assertion)
+  printMsg(tc,"Exception:", ex, " during ", assertion)
   Base.show_backtrace(STDOUT, bt)
 end
 
@@ -61,24 +72,39 @@ function tearDown(tc::JLTest.TestContext)
   try
     tc.tearDown()
   catch ex
-    println("Exception in tearDown for ", tc.desc, " : ", ex)
+    printMsg(tc,"Exception in tearDown for ", tc.desc, " : ", ex)
   end
 end
 
+export @quiet
+macro quiet()
+  quote
+    $(esc(_TESTCTX)).noprint = true
+  end
+end
+
+export @unquiet
+macro unquiet()
+  quote
+    $(esc(_TESTCTX)).noprint = false
+  end
+end
 
 macro assertion1(assertion,arg1,test)
   quote
     local tc = $(esc(_TESTCTX))
     local a = $(esc(arg1))
+    local success = false
     tc.preAssert(tc, $assertion,a)
     try
-
-      doTest(tc, $assertion, $(esc(test)),a)
+      success = doTest(tc, $assertion, $(esc(test)),a)
     catch ex
       bt=catch_backtrace()
       handleException(tc, $assertion, ex,bt)
     end
-    tc.postAssert(tc, $assertion,a)
+    if success
+      tc.postAssert(tc, $assertion,a)
+    end
   end
 end
 
@@ -87,14 +113,17 @@ macro assertion2(assertion,arg1,arg2,test)
     local tc = $(esc(_TESTCTX))
     local a = $(esc(arg1))
     local b = $(esc(arg2))
+    local success = false
     tc.preAssert(tc, $assertion, a, b)
     try
-      doTest(tc, $assertion, $(esc(test)),a,b)
+      success = doTest(tc, $assertion, $(esc(test)),a,b)
     catch ex
       bt=catch_backtrace()
       handleException(tc, $assertion, ex,bt)
     end
-    tc.postAssert(tc, $assertion, a, b)
+    if success
+      tc.postAssert(tc, $assertion, a, b)
+    end
   end
 end
 
@@ -146,6 +175,46 @@ macro tearDownCase(func)
   quote
     $(esc(_TESTCTX)).tearDownCase =  $(esc(func))
     nothing
+  end
+end
+
+export @setPreAssert
+#set a callback function to be called before each assert
+#function should have signiture f(testCtx, assertion, args...)
+#where testCtx is the testcase's TestContext, assertion is a string with name of assertion
+#(e.g., "assertEqual") and args are values that will be passed to the assertion
+#One possible use is in conjunction with userData to capture fine grained stats
+macro setPreAssert(func)
+  quote
+    $(esc(_TESTCTX)).preAssert =  $(esc(func))
+    nothing
+  end
+end
+
+export @setPostAssert
+#set a callback function to be called after testcase finishes.
+#See setPreAssert for details
+macro setPostAssert(func)
+  quote
+    $(esc(_TESTCTX)).postAssert =  $(esc(func))
+    nothing
+  end
+end
+
+export @setUserData
+#store some data in the test context. Possibly for collecting custom test stats.
+macro setUserData(data)
+  quote
+    $(esc(_TESTCTX)).userData =  $(esc(data))
+    nothing
+  end
+end
+
+export @getUserData
+#get user data
+macro getUserData()
+  quote
+    $(esc(_TESTCTX)).userData
   end
 end
 
@@ -251,6 +320,26 @@ macro assertNotMatches(regex,str)
   :(@assertion2("assertNotMatches", $(esc(regex)),$(esc(str)),$(esc(test))))
 end
 
+export @assertSameType
+#type of val1 is same as type of val2
+macro assertSameType(val1,val2)
+  test = :((a,b)->(typeof(a) == typeof(b)))
+  :(@assertion2("assertSameType", $(esc(val1)),$(esc(val2)),$(esc(test))))
+end
+
+export @assertTypeOf
+#type of val1 is typ
+macro assertTypeOf(val,typ)
+  test = :((a,b)->(typeof(a) == b))
+  :(@assertion2("assertTypeOf", $(esc(val)),$(esc(typ)),$(esc(test))))
+end
+
+export @assertStrictlyEqual
+#val1 == val2 and type of val1 is same as type of val2
+macro assertStrictlyEqual(val1,val2)
+  test = :((a,b)->(a == b && typeof(a) == typeof(b)))
+  :(@assertion2("assertStrictlyEqual", $(esc(val1)),$(esc(val2)),$(esc(test))))
+end
 
 export @assertTrue
 macro assertTrue(expr)
@@ -277,11 +366,57 @@ export @expectFailures
 macro expectFailures(n)
   quote
     if $(esc(_TESTCTX)).numFailed != $(esc(n))
-      println("Error: ", $(esc(n))," expected failures but ", $(esc(_TESTCTX)).numFailed, " actual")
+      printMsg($(esc(_TESTCTX)), "Error: ", $(esc(n))," expected failures but ", $(esc(_TESTCTX)).numFailed, " actual")
     else
       $(esc(_TESTCTX)).numFailed -= $(esc(n))
     end
   end
+end
+
+export @expectErrors
+#Use to assert that n errors are expected at the point where macro appears
+#and deduct from error count
+macro expectErrors(n)
+  quote
+    if $(esc(_TESTCTX)).numFailed != $(esc(n))
+      printMsg($(esc(_TESTCTX)), "Error: ", $(esc(n))," expected errors but ", $(esc(_TESTCTX)).numErrors, " actual")
+    else
+      $(esc(_TESTCTX)).numErrors -= $(esc(n))
+    end
+  end
+end
+
+STARTFAIL = :startFail
+STARTERR = :startErr
+
+export @suppressAll
+#usage @suppressAll blk - suppress all failures, errors and msgs in blk
+#usage @suppressAll nFailure blk - expect nFailures and suppress all errors and msgs in blk
+#usage @suppressAll nFailure nErrors blk - expect nFailures and nErrors and suppress all msgs in blk
+macro suppressAll(args...)
+  l = length(args)
+  if  l == 1
+    nFailures = nErrors = -1
+    block = args[1]
+  elseif l == 2
+    (nFailures,block) = args
+    nErrors = -1
+  elseif l == 3
+    (nFailures,nErrors, block)  = args
+  else
+    error("wrong number arguements to suppressAll: $l")
+  end
+  quote
+    local tc = $(esc(_TESTCTX))
+    $(esc(STARTFAIL)) = tc.numFailed
+    $(esc(STARTERR)) = tc.numErrors
+    @quiet()
+    $(esc(block))
+    @unquiet()
+    @expectFailures($nFailures >= 0 ? $nFailures : (tc.numFailed - $(esc(STARTFAIL))))
+    @expectErrors($nErrors >= 0 ? $nErrors : (tc.numErrors - $(esc(STARTFAIL))))
+  end
+
 end
 
 export @assertThrows
@@ -298,29 +433,17 @@ macro assertThrows(args...)
     try
       $(esc(f))
       $(esc(_TESTCTX)).numFailed += 1
-      println("assertThrows: Expected exception", length($exceps) > 0 ? "in $sexceps" : "")
+      printMsg($(esc(_TESTCTX)),"assertThrows: Expected exception", length($exceps) > 0 ? "in $sexceps" : "")
     catch ex
       tex = typeof(ex).name.name
       if length($exceps) > 0 && !( tex in $exceps)
         $(esc(_TESTCTX)).numFailed += 1
-        println("assertThrows: Expected exceptions in $sexceps got $tex")
+        printMsg($(esc(_TESTCTX)), "assertThrows: Expected exceptions in $sexceps got $tex")
       end
     end
   end
 end
 
-export @expectErrors
-#Use to assert that n errors are expected at the point where macro appears
-#and deduct from error count
-macro expectErrors(n)
-  quote
-    if $(esc(_TESTCTX)).numFailed != $(esc(n))
-      println("Error: ", $(esc(n))," expected errors but ", $(esc(_TESTCTX)).numErrors, " actual")
-    else
-      $(esc(_TESTCTX)).numErrors -= $(esc(n))
-    end
-  end
-end
 
 export @testreport
 macro testreport()
@@ -331,20 +454,29 @@ end
 
 export @testcase
 #Create test case around a block
-macro testcase(block)
-  quote
-    let $(esc(_TESTCTX)) = JLTest.TestContext("No Name Test Case")
-      local tc = $(esc(_TESTCTX))
-      tc.setUpCase()
-      $(esc(block))
-      tc.tearDownCase()
-      if tc.numErrors == 0 && tc.numFailed == 0
-        println(tc.name, " Ok")
-        if tc.numSkipped > 0
-          println(tc.numSkipped, " Tests Skipped")
+macro testcase(args...)
+  if length(args) == 1
+    enabled = true
+    block = args[1]
+  else
+    enabled = args[1]
+    block = args[2]
+  end
+  if enabled
+    quote
+      let $(esc(_TESTCTX)) = JLTest.TestContext("No Name Test Case")
+        local tc = $(esc(_TESTCTX))
+        tc.setUpCase()
+        $(esc(block))
+        tc.tearDownCase()
+        if tc.numErrors == 0 && tc.numFailed == 0
+          printMsg(tc, tc.name, " Ok")
+          if tc.numSkipped > 0
+            printMsg(tc, tc.numSkipped, " Tests Skipped")
+          end
+        else
+          printMsg(tc, tc.name, " FAILED! ", tc.numFailed, " failures ", tc.numErrors, " errors")
         end
-      else
-        println(tc.name, " FAILED! ", tc.numFailed, " failures ", tc.numErrors, " errors")
       end
     end
   end
@@ -369,7 +501,7 @@ macro test(block)
       if before == after
         tc.numPassed +=1
       else
-        println(tc.curTest, " Failed!")
+        printMsg(tc, tc.curTest, " Failed!")
       end
       tc.curTest = ""
     end
