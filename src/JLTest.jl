@@ -56,7 +56,7 @@ function doTest(tc::JLTest.TestContext, assertion::String, test::Function, args.
     for arg in args[1:end-1]
       printMsg(tc,arg,", ";nl="")
     end
-    printMsg(tc,args[end], ") failed")
+    printMsg(tc,args[end], ") failed in ",tc.curTest)
     return false
   end
   return true
