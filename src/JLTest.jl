@@ -430,15 +430,18 @@ macro assertThrows(args...)
   end
   quote
     sexceps = $exceps
+    local tc = $(esc(_TESTCTX))
     try
       $(esc(f))
-      $(esc(_TESTCTX)).numFailed += 1
-      printMsg($(esc(_TESTCTX)),"assertThrows: Expected exception", length($exceps) > 0 ? "in $sexceps" : "")
+      tc.numFailed += 1
+      printMsg(tc,"assertThrows: Expected exception", length($exceps) > 0 ? "in $sexceps " : " ","Test: ", tc.curTest)
     catch ex
       tex = typeof(ex).name.name
       if length($exceps) > 0 && !( tex in $exceps)
-        $(esc(_TESTCTX)).numFailed += 1
-        printMsg($(esc(_TESTCTX)), "assertThrows: Expected exceptions in $sexceps got $tex")
+        tc.numFailed += 1
+        printMsg(tc, "assertThrows: Expected exceptions in $sexceps got $tex. Test: ", tc.curTest)
+        bt=catch_backtrace()
+        handleException(tc, "assertThrows", ex,bt)
       end
     end
   end
