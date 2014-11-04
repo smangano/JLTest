@@ -65,7 +65,9 @@ end
 function handleException(tc::JLTest.TestContext, assertion, ex, bt)
   tc.numErrors += 1
   printMsg(tc,"Exception:", ex, " during ", assertion)
-  Base.show_backtrace(STDOUT, bt)
+  if !tc.noprint
+    Base.show_backtrace(STDOUT, bt)
+  end
 end
 
 function tearDown(tc::JLTest.TestContext)
@@ -440,8 +442,9 @@ macro assertThrows(args...)
       if length($exceps) > 0 && !( tex in $exceps)
         tc.numFailed += 1
         printMsg(tc, "assertThrows: Expected exceptions in $sexceps got $tex. Test: ", tc.curTest)
-        bt=catch_backtrace()
-        handleException(tc, "assertThrows", ex,bt)
+        if !tc.noprint
+          Base.show_backtrace(STDOUT, catch_backtrace())
+        end
       end
     end
   end
