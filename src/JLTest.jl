@@ -92,7 +92,11 @@ macro unquiet()
   end
 end
 
-macro assertion1(assertion,arg1,test)
+macro assertion1(assertion,arg1,test,args...)
+  local msg = ""
+  if length(args) > 0
+      msg = args[1]
+  end
   quote
     local tc = $(esc(_TESTCTX))
     local a = $(esc(arg1))
@@ -100,6 +104,9 @@ macro assertion1(assertion,arg1,test)
     tc.preAssert(tc, $assertion,a)
     try
       success = doTest(tc, $assertion, $(esc(test)),a)
+      if !success && $msg != ""
+        printMsg(tc,$msg)
+      end
     catch ex
       bt=catch_backtrace()
       handleException(tc, $assertion, ex,bt)
@@ -110,7 +117,11 @@ macro assertion1(assertion,arg1,test)
   end
 end
 
-macro assertion2(assertion,arg1,arg2,test)
+macro assertion2(assertion,arg1,arg2,test,args...)
+  local msg = ""
+  if length(args) > 0
+      msg = args[1]
+  end
   quote
     local tc = $(esc(_TESTCTX))
     local a = $(esc(arg1))
@@ -119,6 +130,9 @@ macro assertion2(assertion,arg1,arg2,test)
     tc.preAssert(tc, $assertion, a, b)
     try
       success = doTest(tc, $assertion, $(esc(test)),a,b)
+      if !success && $msg != ""
+        printMsg(tc,$msg)
+      end
     catch ex
       bt=catch_backtrace()
       handleException(tc, $assertion, ex,bt)
@@ -221,145 +235,145 @@ macro getUserData()
 end
 
 export @assertEqual
-macro assertEqual(val1,val2)
+macro assertEqual(val1,val2,args...)
   test = :((a,b)->(a == b))
-  :( @assertion2("assertEqual", $(esc(val1)), $(esc(val2)), $(esc(test))) )
+  :( @assertion2("assertEqual", $(esc(val1)), $(esc(val2)), $(esc(test)), $(args...)) )
 end
 
 export @assertNotEqual
-macro assertNotEqual(val1,val2)
+macro assertNotEqual(val1,val2,args...)
   test = :((a,b)->(a != b))
-  :(@assertion2("assertNotEqual",$(esc(val1)),$(esc(val2)),$(esc(test))))
+  :( @assertion2("assertNotEqual", $(esc(val1)), $(esc(val2)), $(esc(test)), $(args...)) )
 end
 
 export @assertLess
 #val1 < val2
-macro assertLess(val1,val2)
+macro assertLess(val1,val2,args...)
   test = :((a,b)->(a < b))
-  :(@assertion2("assertEqual",$(esc(val1)),$(esc(val2)),$(esc(test))))
+  :( @assertion2("assertEqual", $(esc(val1)), $(esc(val2)), $(esc(test)), $(args...)) )
 end
 
 export @assertLessEqual
 #val1 <= val2
-macro assertLessEqual(val1,val2)
+macro assertLessEqual(val1,val2,args...)
   test = :((a,b)->(a <= b))
-  :(@assertion2("assertLessEqual",$(esc(val1)),$(esc(val2)),$(esc(test))))
+  :( @assertion2("assertLessEqual", $(esc(val1)), $(esc(val2)), $(esc(test)), $(args...)) )
 end
 
 export @assertGreater
 #val1 > val2
-macro assertGreater(val1,val2)
+macro assertGreater(val1,val2,args...)
   test = :((a,b)->(a > b))
-  :(@assertion2("assertGreater",$(esc(val1)),$(esc(val2)),$(esc(test))))
+  :( @assertion2("assertGreater", $(esc(val1)), $(esc(val2)), $(esc(test)), $(args...)) )
 end
 
 export @assertGreaterEqual
 #val1 >= val2
-macro assertGreaterEqual(val1,val2)
+macro assertGreaterEqual(val1,val2,args...)
   test = :((a,b)->(a >= b))
-  :(@assertion2("assertGreater",$(esc(val1)),$(esc(val2)),$(esc(test))))
+  :( @assertion2("assertGreater", $(esc(val1)), $(esc(val2)), $(esc(test)), $(args...)) )
 end
 
 export @assertIs
 #an obj1 is the same as obj2
-macro assertIs(obj1,obj2)
+macro assertIs(obj1,obj2,args...)
   test = :((a,b)->(a === b))
-  :(@assertion2("assertIs",$(esc(obj1)),$(esc(obj2)),$(esc(test))))
+  :( @assertion2("assertIs", $(esc(obj1)), $(esc(obj2)), $(esc(test)), $(args...)) )
 end
 
 export @assertIsNot
 #an obj1 is not the same as obj2
-macro assertIsNot(obj1,obj2)
+macro assertIsNot(obj1,obj2,args...)
   test = :((a,b)->(a !== b))
-  :(@assertion2("assertIsNot",$(esc(obj1)),$(esc(obj2)),$(esc(test))))
+  :( @assertion2("assertIsNot", $(esc(obj1)), $(esc(obj2)), $(esc(test)), $(args...)) )
 end
 
 export @assertIn
 #an obj not in collection
-macro assertIn(obj,collection)
+macro assertIn(obj,collection,args...)
   test = :((a,b)->(a in b))
-  :(@assertion2("assertIn",$(esc(obj)),$(esc(collection)),$(esc(test))))
+  :( @assertion2("assertIn", $(esc(obj)), $(esc(collection)), $(esc(test)), $(args...)) )
 end
 
 export @assertNotIn
 #an obj not in a collection
-macro assertNotIn(obj,collection)
+macro assertNotIn(obj,collection,args...)
   test = :((a,b)->!(a in b))
-  :(@assertion2("assertNotIn",$(esc(obj)),$(esc(collection)),$(esc(test))))
+  :( @assertion2("assertNotIn", $(esc(obj)), $(esc(collection)), $(esc(test)), $(args...)) )
 end
 
 export @assertItemsEqual
 #two collections equal ignoring order difference
-macro assertItemsEqual(col1,col2)
+macro assertItemsEqual(col1,col2,args...)
   test = :((a,b)->(sort(a) == sort(b)))
-  :(@assertion2("assertItemsEqual",$(esc(col1)),$(esc(col2)),$(esc(test))))
+  :( @assertion2("assertItemsEqual", $(esc(col1)), $(esc(col2)), $(esc(test)), $(args...)) )
 end
 
 export @assertIsA
 #an obj is a type
-macro assertIsA(obj,typ)
+macro assertIsA(obj,typ,args...)
   test = :((a,b)->isa(a,b))
-  :(@assertion2("assertIsA",$(esc(obj)),$(esc(typ)),$(esc(test))))
+  :( @assertion2("assertIsA", $(esc(obj)), $(esc(typ)), $(esc(test)), $(args...)) )
 end
 
 export @assertIsNotA
 #an obj is not a type
-macro assertIsNotA(obj,typ)
+macro assertIsNotA(obj,typ,args...)
   test = :((a,b)->!isa(a,b))
-  :(@assertion2("assertIsNotA", $(esc(obj)),$(esc(typ)), $(esc(test))))
+  :( @assertion2("assertIsNotA", $(esc(obj)),$(esc(typ)), $(esc(test)), $(args...)) )
 end
 
 export @assertMatches
 #a regex matches a string
-macro assertMatches(regex,str)
+macro assertMatches(regex,str,args...)
   test = :((a,b)->ismatch(a,b))
-  :(@assertion2("assertMatches", $(esc(regex)),$(esc(str)),$(esc(test))))
+  :( @assertion2("assertMatches", $(esc(regex)), $(esc(str)), $(esc(test)), $(args...)) )
 end
 
 export @assertNotMatches
-macro assertNotMatches(regex,str)
+macro assertNotMatches(regex,str,args...)
   test = :((a,b)->!ismatch(a,b))
-  :(@assertion2("assertNotMatches", $(esc(regex)),$(esc(str)),$(esc(test))))
+  :( @assertion2("assertNotMatches", $(esc(regex)), $(esc(str)), $(esc(test)), $(args...)) )
 end
 
 export @assertSameType
 #type of val1 is same as type of val2
-macro assertSameType(val1,val2)
+macro assertSameType(val1,val2,args...)
   test = :((a,b)->(typeof(a) == typeof(b)))
-  :(@assertion2("assertSameType", $(esc(val1)),$(esc(val2)),$(esc(test))))
+  :( @assertion2("assertSameType", $(esc(val1)), $(esc(val2)), $(esc(test)), $(args...)) )
 end
 
 export @assertTypeOf
 #type of val1 is typ
-macro assertTypeOf(val,typ)
+macro assertTypeOf(val,typ,args...)
   test = :((a,b)->(typeof(a) == b))
-  :(@assertion2("assertTypeOf", $(esc(val)),$(esc(typ)),$(esc(test))))
+  :( @assertion2("assertTypeOf", $(esc(val)), $(esc(typ)), $(esc(test)), $(args...)) )
 end
 
 export @assertStrictlyEqual
 #val1 == val2 and type of val1 is same as type of val2
-macro assertStrictlyEqual(val1,val2)
+macro assertStrictlyEqual(val1,val2,args...)
   test = :((a,b)->(a == b && typeof(a) == typeof(b)))
-  :(@assertion2("assertStrictlyEqual", $(esc(val1)),$(esc(val2)),$(esc(test))))
+  :( @assertion2("assertStrictlyEqual", $(esc(val1)), $(esc(val2)), $(esc(test)), $(args...)) )
 end
 
 export @assertTrue
-macro assertTrue(expr)
+macro assertTrue(expr,args...)
   test = :((a)->(isa(a,Bool) && a))
-  :(@assertion1("assertTrue", $(esc(expr)),$(esc(test))))
+  :( @assertion1("assertTrue", $(esc(expr)), $(esc(test)), $(args...)) )
 end
 
 export @assertFalse
-macro assertFalse(expr)
+macro assertFalse(expr,args...)
   test = :((a)->(isa(a,Bool) && !a))
-  :(@assertion1("assertFalse", $(esc(expr)),$(esc(test))))
+  :( @assertion1("assertFalse", $(esc(expr)), $(esc(test)), $(args...)) )
 end
 
 export @testFailed(msg)
 #Fail and print msg
 macro testFailed(msg)
   test = :((a)->false)
-  :(@assertion1("Failed",$(esc(msg)),$(esc(test))))
+  :( @assertion1("Failed", $(esc(msg)), $(esc(test))) )
 end
 
 export @expectFailures

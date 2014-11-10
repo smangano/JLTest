@@ -184,6 +184,12 @@ end
   end
 
   @test begin
+    @testname "test msg"
+    @assertEqual(1,2,"success if you see this msg")
+    @expectFailures(1)
+  end
+
+  @test begin
     @testname "type related tests"
     @assertTypeOf(1, Int64)
     @assertSameType(1, 1000)
