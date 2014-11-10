@@ -240,6 +240,17 @@ macro assertEqual(val1,val2,args...)
   :( @assertion2("assertEqual", $(esc(val1)), $(esc(val2)), $(esc(test)), $(args...)) )
 end
 
+export @assertAproxEqual
+macro assertAproxEqual(val1,val2,args...)
+  local prec = 1E-4
+  if length(args) > 0 && isa(args[1], Number)
+    prec = args[1]
+    args = args[2:end]
+  end
+  test = :((a,b)->(maximum(abs(a - b)) < $prec))
+  :( @assertion2("assertAproxEqual", $(esc(val1)), $(esc(val2)), $(esc(test)), $(args...)) )
+end
+
 export @assertNotEqual
 macro assertNotEqual(val1,val2,args...)
   test = :((a,b)->(a != b))

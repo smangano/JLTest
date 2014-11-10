@@ -66,6 +66,16 @@ end
     @assertGreaterEqual(-1,-1)
   end
 
+  @test begin
+    @testname "assertAproxEqual Tests"
+    @assertAproxEqual(1,1.00005)
+    @assertAproxEqual(1,1.01,0.1)
+    @assertAproxEqual(1,1.01,"expected failure")
+    @assertAproxEqual(1,1.01,0.1,"expected success")
+    @assertAproxEqual([1.1, 2.1, 3.1], [1.10001, 2.09999, 3.1])
+    @expectFailures(1)
+  end
+
   myString1 = "a string"
   myString1a = myString1
   myString2 = "a string"
